@@ -103,10 +103,10 @@
         "recognition": "OCR",
         "expected": "^确定$",
         "roi": [
-            300,
-            995,
-            130,
-            70
+            260,
+            1000,
+            200,
+            180
         ],
         "action": "Click",
         "post_delay": 2500,
@@ -165,10 +165,10 @@
         "recognition": "OCR",
         "expected": "^确定$",
         "roi": [
-            300,
-            995,
-            130,
-            70
+            260,
+            1000,
+            200,
+            180
         ],
         "action": "Click",
         "post_delay": 2500,
@@ -227,10 +227,10 @@
         "recognition": "OCR",
         "expected": "^确定$",
         "roi": [
-            300,
-            995,
-            130,
-            70
+            260,
+            1000,
+            200,
+            180
         ],
         "action": "Click",
         "post_delay": 2500,

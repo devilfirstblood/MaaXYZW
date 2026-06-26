@@ -9,10 +9,10 @@
         "recognition": "OCR",
         "expected": "每日任务",
         "roi": [
-            20,
-            460,
-            200,
-            70
+            10,
+            420,
+            360,
+            160
         ],
         "action": "DoNothing",
         "post_delay": 300,

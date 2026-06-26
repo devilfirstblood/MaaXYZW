@@ -17,6 +17,7 @@
         ],
         "action": "DoNothing",
         "post_delay": 300,
+        "timeout": 4000,
         "next": [
             "招募_点前往"
         ]

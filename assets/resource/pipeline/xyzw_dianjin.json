@@ -16,6 +16,7 @@
         ],
         "action": "DoNothing",
         "post_delay": 300,
+        "timeout": 4000,
         "next": [
             "点金_点前往"
         ]

@@ -17,6 +17,7 @@
         ],
         "action": "DoNothing",
         "post_delay": 300,
+        "timeout": 4000,
         "next": [
             "宝箱_点前往"
         ]

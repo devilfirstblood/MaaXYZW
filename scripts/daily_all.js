@@ -1,15 +1,21 @@
-// 咸鱼之王「一条龙」定时执行脚本
-// 每隔 8 小时执行一次：启动游戏进主界面 -> 挂机领取 -> 盐罐加时+领奖 -> 退出游戏
+// 咸鱼之王「每日任务一键全完成」定时执行脚本
+// 一条链：启动进主界面 -> 进任务页 -> 赠送/招募/点金/宝箱/黑市/竞技场(已完成的自动跳过)
+//         -> 统一领取任务奖 + 周/日活跃全部领取
+// 与 interface.json 的「咸鱼之王-每日任务一键全完成」task 完全一致(入口+override)。
 //
-// 单轮超时保护：每轮一条龙限时 10 分钟，超时(未拿到 status=3000)则中止任务 +
-// 强制关闭游戏，然后等下一个 8 小时周期；避免卡死时一直占着游戏到下一周期。
+// 单轮超时保护：每轮限时 15 分钟，超时(未拿到 status=3000)则中止任务 + 强制关游戏，
+// 然后等下一周期；避免卡死时一直占着游戏。
 //
 // 用法（在项目根目录 C:\AndroidPro\MFAA\MaaTest 下运行）：
-//   node scripts/daily_chain.js                  # 默认设备 emulator-5554，每8小时循环
-//   node scripts/daily_chain.js 127.0.0.1:16384  # 指定 adb 设备地址
-//   node scripts/daily_chain.js emulator-5554 4  # 指定设备 + 间隔小时数(4小时)
-//   node scripts/daily_chain.js emulator-5554 8 once  # 只跑一次，不循环
-//   node scripts/daily_chain.js emulator-5554 8 once 10  # 第5参=单轮超时分钟数(默认10)
+//   node scripts/daily_all.js                  # 默认设备 emulator-5554，每24小时循环
+//   node scripts/daily_all.js 16384            # 指定设备(name/address 包含匹配，如 MuMu 模拟器1)
+//   node scripts/daily_all.js 16416 24         # 指定设备 + 间隔小时数(默认24，每日任务一天一次)
+//   node scripts/daily_all.js 16384 24 once    # 只跑一次，不循环
+//   node scripts/daily_all.js 16384 24 once 15 # 第5参=单轮超时分钟数(默认15)
+//
+// 多模拟器：两台分别用各自 address/name 起两个进程，例如：
+//   node scripts/daily_all.js 16384   # 模拟器1
+//   node scripts/daily_all.js 16416   # 模拟器2
 //
 // 依赖 maa-tools 下载的 maa-node binding（npx maa-tools check 会自动准备）。
 
@@ -23,28 +29,33 @@ const maa = require(maaPath)
 const RESOURCE = path.resolve(__dirname, '..', 'assets', 'resource')
 
 const TARGET = process.argv[2] || 'emulator-5554' // 设备 name/address 包含匹配
-const INTERVAL_HOURS = Number(process.argv[3] || 8) // 间隔小时数
+const INTERVAL_HOURS = Number(process.argv[3] || 24) // 间隔小时数（每日任务一天一次，默认24）
 const ONCE = process.argv[4] === 'once' // 只跑一次
 
 const PACKAGE = 'com.hortor.games.xyzw' // 咸鱼之王包名（超时时强制关闭）
-// 单轮一条龙超时：默认 10 分钟，超时即关游戏等下一周期。可用第 5 个参数(分钟)覆盖(便于调试)。
-const RUN_TIMEOUT_MS = (Number(process.argv[5]) || 10) * 60 * 1000
+// 单轮超时：默认 15 分钟（新账号全任务真实执行较久），超时即关游戏等下一周期。第5参(分钟)可覆盖。
+const RUN_TIMEOUT_MS = (Number(process.argv[5]) || 15) * 60 * 1000
 
-// 「一条龙」串联：入口 咸鱼_启动游戏 + override 衔接三段
-// （与 interface.json 的「咸鱼之王-一条龙」task 一致）
-const CHAIN_ENTRY = '咸鱼_启动游戏'
-const CHAIN_OVERRIDE = {
-    '咸鱼_二次确认主界面': { next: ['挂机_入口'] },
-    '挂机_完成': { next: ['盐罐_入口'] },
+// 「每日任务一键全完成」串联：入口 全日常_启动 + override 衔接各段
+// （与 interface.json 的「咸鱼之王-每日任务一键全完成」task 一致）
+const ENTRY = '全日常_启动'
+const OVERRIDE = {
+    '赠送金币_完成': { next: ['全日常_复位1'] },
+    '赠送金币_已完成跳过': { next: ['全日常_复位1'] }, // 赠送已完成走的是跳过出口，也要接复位
+    '招募_完成': { next: ['全日常_复位2'] },
+    '点金_完成': { next: ['全日常_复位3'] },
+    '宝箱_完成': { next: ['全日常_复位4'] },
+    '黑市_完成': { next: ['全日常_复位5'] },
+    '竞技场_完成': { next: ['全日常_复位6'] },
 }
 
 function ts() {
     return new Date().toLocaleString('zh-CN', { hour12: false })
 }
-const log = (...a) => console.log(`[${ts()}]`, ...a)
+const log = (...a) => console.log(`[${ts()}]`, `[${TARGET}]`, ...a)
 
-// 跑一次一条龙：每次都新建连接/资源/tasker，跑完销毁，避免长时间持有句柄。
-// 加 10 分钟超时：超时未完成(拿不到 status=3000)则中止任务 + 强制关游戏，等下一周期。
+// 跑一次每日任务全完成：每次新建连接/资源/tasker，跑完销毁，避免长时间持有句柄。
+// 加 15 分钟超时：超时未完成(拿不到 status=3000)则中止任务 + 强制关游戏，等下一周期。
 async function runOnce() {
     const devices = await maa.AdbController.find()
     if (!devices) throw new Error('未发现任何 adb 设备')
@@ -88,10 +99,10 @@ async function runOnce() {
     }
 
     try {
-        log('开始执行一条龙:', CHAIN_ENTRY, `(超时 ${RUN_TIMEOUT_MS / 60000} 分钟)`)
-        const job = tasker.post_task(CHAIN_ENTRY, CHAIN_OVERRIDE)
+        log('开始执行每日任务一键全完成:', ENTRY, `(超时 ${RUN_TIMEOUT_MS / 60000} 分钟)`)
+        const job = tasker.post_task(ENTRY, OVERRIDE)
 
-        // 任务完成 vs 10 分钟超时，赛跑
+        // 任务完成 vs 超时，赛跑
         let timer
         const timeout = new Promise((resolve) => {
             timer = setTimeout(() => resolve('__TIMEOUT__'), RUN_TIMEOUT_MS)
@@ -100,7 +111,7 @@ async function runOnce() {
         clearTimeout(timer)
 
         if (detail === '__TIMEOUT__') {
-            log(`⚠ 一条龙超时(${RUN_TIMEOUT_MS / 60000} 分钟未完成)，中止任务并关游戏`)
+            log(`⚠ 每日任务超时(${RUN_TIMEOUT_MS / 60000} 分钟未完成)，中止任务并关游戏`)
             try {
                 await tasker.post_stop().wait() // 中止 tasker 当前任务流水线，等中止生效再 destroy
             } catch (e) {
@@ -108,10 +119,10 @@ async function runOnce() {
             }
             await killGame()
         } else if (detail && detail.status === 3000) {
-            log('✓ 一条龙完成 status=', detail.status, 'nodes=', detail.nodes.length)
+            log('✓ 每日任务完成 status=', detail.status, 'nodes=', detail.nodes.length)
         } else {
             // 任务结束但非成功(如某段 4000 失败)：也关游戏，保持设备干净
-            log('✗ 一条龙未成功 status=', detail && detail.status, 'nodes=', detail && detail.nodes.length, '-> 关游戏')
+            log('✗ 每日任务未成功 status=', detail && detail.status, 'nodes=', detail && detail.nodes.length, '-> 关游戏')
             await killGame()
         }
     } finally {
@@ -124,7 +135,7 @@ async function runOnce() {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 ;(async () => {
-    log('==== 咸鱼一条龙定时脚本启动 ====', `设备=${TARGET}`, ONCE ? '(只跑一次)' : `(每 ${INTERVAL_HOURS} 小时一次)`)
+    log('==== 咸鱼每日任务一键全完成 定时脚本启动 ====', `设备=${TARGET}`, ONCE ? '(只跑一次)' : `(每 ${INTERVAL_HOURS} 小时一次)`)
     log('资源目录:', RESOURCE)
     while (true) {
         try {

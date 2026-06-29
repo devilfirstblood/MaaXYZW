@@ -6,12 +6,15 @@
 // 单轮超时保护：每轮限时 15 分钟，超时(未拿到 status=3000)则中止任务 + 强制关游戏，
 // 然后等下一周期；避免卡死时一直占着游戏。
 //
+// 定时方式：每天在指定整点执行一次（传 8 = 每天 8:00，传 13 = 每天 13:00）。
+//   脚本启动后先等到当天/次日最近的那个整点再首跑，之后每天同一整点循环。
+//
 // 用法（在项目根目录 C:\AndroidPro\MFAA\MaaTest 下运行）：
-//   node scripts/daily_all.js                  # 默认设备 emulator-5554，每24小时循环
-//   node scripts/daily_all.js 16384            # 指定设备(name/address 包含匹配，如 MuMu 模拟器1)
-//   node scripts/daily_all.js 16416 24         # 指定设备 + 间隔小时数(默认24，每日任务一天一次)
-//   node scripts/daily_all.js 16384 24 once    # 只跑一次，不循环
-//   node scripts/daily_all.js 16384 24 once 15 # 第5参=单轮超时分钟数(默认15)
+//   node scripts/daily_all.js                   # 默认设备 emulator-5554，每天 8:00 执行
+//   node scripts/daily_all.js 16384             # 指定设备(name/address 包含匹配，如 MuMu 模拟器1)
+//   node scripts/daily_all.js 16416 13          # 指定设备 + 每天执行的整点小时(0-23，默认8)
+//   node scripts/daily_all.js 16384 8 once      # 立即只跑一次，不循环(忽略定时)
+//   node scripts/daily_all.js 16384 8 once 15   # 第5参=单轮超时分钟数(默认15)
 //
 // 多模拟器：两台分别用各自 address/name 起两个进程，例如：
 //   node scripts/daily_all.js 16384   # 模拟器1
@@ -29,8 +32,8 @@ const maa = require(maaPath)
 const RESOURCE = path.resolve(__dirname, '..', 'assets', 'resource')
 
 const TARGET = process.argv[2] || 'emulator-5554' // 设备 name/address 包含匹配
-const INTERVAL_HOURS = Number(process.argv[3] || 24) // 间隔小时数（每日任务一天一次，默认24）
-const ONCE = process.argv[4] === 'once' // 只跑一次
+const DAILY_HOUR = Number(process.argv[3] ?? 8) // 每天执行的整点小时(0-23，默认 8 点)
+const ONCE = process.argv[4] === 'once' // 立即只跑一次（忽略定时）
 
 const PACKAGE = 'com.hortor.games.xyzw' // 咸鱼之王包名（超时时强制关闭）
 // 单轮超时：默认 15 分钟（新账号全任务真实执行较久），超时即关游戏等下一周期。第5参(分钟)可覆盖。
@@ -134,22 +137,41 @@ async function runOnce() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+// 计算从现在到「下一个 DAILY_HOUR 整点」的下一个执行时刻：
+// 取今天的 DAILY_HOUR:00:00，若已过则顺延到明天同一时刻。
+function nextRunTime() {
+    const now = new Date()
+    const next = new Date(now)
+    next.setHours(DAILY_HOUR, 0, 0, 0)
+    if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1)
+    return next
+}
+
 ;(async () => {
-    log('==== 咸鱼每日任务一键全完成 定时脚本启动 ====', `设备=${TARGET}`, ONCE ? '(只跑一次)' : `(每 ${INTERVAL_HOURS} 小时一次)`)
+    if (ONCE) {
+        log('==== 咸鱼每日任务一键全完成 定时脚本启动 ====', `设备=${TARGET}`, '(立即只跑一次)')
+        log('资源目录:', RESOURCE)
+        try {
+            await runOnce()
+        } catch (e) {
+            log('本轮执行出错:', e.message ?? e)
+        }
+        log('单次模式，结束。')
+        return
+    }
+
+    log('==== 咸鱼每日任务一键全完成 定时脚本启动 ====', `设备=${TARGET}`, `(每天 ${DAILY_HOUR}:00 执行)`)
     log('资源目录:', RESOURCE)
     while (true) {
+        const next = nextRunTime()
+        const waitMs = next.getTime() - Date.now()
+        log(`下一次执行时间: ${next.toLocaleString('zh-CN', { hour12: false })}（${(waitMs / 3600000).toFixed(1)} 小时后）`)
+        await sleep(waitMs)
         try {
             await runOnce()
         } catch (e) {
             log('本轮执行出错（不中断循环）:', e.message ?? e)
         }
-        if (ONCE) {
-            log('单次模式，结束。')
-            break
-        }
-        const next = new Date(Date.now() + INTERVAL_HOURS * 3600 * 1000)
-        log(`下一次执行时间: ${next.toLocaleString('zh-CN', { hour12: false })}（${INTERVAL_HOURS} 小时后）`)
-        await sleep(INTERVAL_HOURS * 3600 * 1000)
     }
 })().catch((e) => {
     log('致命错误:', e)

@@ -4,6 +4,10 @@
 // 单轮超时保护：每轮一条龙限时 10 分钟，超时(未拿到 status=3000)则中止任务 +
 // 强制关闭游戏，然后等下一个 8 小时周期；避免卡死时一直占着游戏到下一周期。
 //
+// 登录校验：设了环境变量 WECOM_KEY 时，每轮跑一条龙前先校验登录态(共享 lib/login_check.js)——
+//   掉登录则调扫码工具出二维码发企微群、等人工扫码授权成功后再跑一条龙；授权超时则跳过本轮等下周期。
+//   未设 WECOM_KEY 则跳过登录校验，直接跑一条龙(向后兼容)。
+//
 // 用法（在项目根目录 C:\AndroidPro\MFAA\MaaTest 下运行）：
 //   node scripts/daily_chain.js                  # 默认设备 emulator-5554，每8小时循环
 //   node scripts/daily_chain.js 127.0.0.1:16384  # 指定 adb 设备地址
@@ -88,6 +92,22 @@ async function runOnce() {
     }
 
     try {
+        // 跑一条龙前先做登录校验：掉登录态时走扫码授权流程，授权成功后再跑一条龙。
+        // 设了 WECOM_KEY 才启用(需要发企微二维码提醒人工扫码)；未设则跳过，保持原有不带 key 也能跑。
+        const WECOM_KEY = process.env.WECOM_KEY || ''
+        if (WECOM_KEY) {
+            const { ensureLoggedIn } = require('./lib/login_check')
+            const loginResult = await ensureLoggedIn(ctrl, tasker, { wecomKey: WECOM_KEY, target: TARGET, log })
+            if (loginResult === 'timeout') {
+                log('⚠ 检测到掉登录态但等不到扫码授权，跳过本轮一条龙，关游戏等下个周期')
+                await killGame()
+                return // finally 仍会 destroy ctrl/res/tasker
+            }
+            // 'authorized'(刚扫码登录) 或 'already'(本就已登录) -> 继续跑一条龙
+        } else {
+            log('未设置 WECOM_KEY，跳过登录校验，直接跑一条龙')
+        }
+
         log('开始执行一条龙:', CHAIN_ENTRY, `(超时 ${RUN_TIMEOUT_MS / 60000} 分钟)`)
         const job = tasker.post_task(CHAIN_ENTRY, CHAIN_OVERRIDE)
 

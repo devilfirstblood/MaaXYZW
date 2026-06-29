@@ -6,6 +6,10 @@
 // 单轮超时保护：每轮限时 15 分钟，超时(未拿到 status=3000)则中止任务 + 强制关游戏，
 // 然后等下一周期；避免卡死时一直占着游戏。
 //
+// 登录校验：设了环境变量 WECOM_KEY 时，每轮跑每日任务前先校验登录态(共享 lib/login_check.js)——
+//   掉登录则调扫码工具出二维码发企微群、等人工扫码授权成功后再跑每日任务；授权超时则跳过本轮等下周期。
+//   未设 WECOM_KEY 则跳过登录校验，直接跑每日任务(向后兼容)。
+//
 // 定时方式：每天在指定整点执行一次（传 8 = 每天 8:00，传 13 = 每天 13:00）。
 //   脚本启动后先等到当天/次日最近的那个整点再首跑，之后每天同一整点循环。
 //
@@ -102,6 +106,22 @@ async function runOnce() {
     }
 
     try {
+        // 跑每日任务前先做登录校验：掉登录态时走扫码授权流程，授权成功后再跑每日任务。
+        // 设了 WECOM_KEY 才启用(需要发企微二维码提醒人工扫码)；未设则跳过，保持原有不带 key 也能跑。
+        const WECOM_KEY = process.env.WECOM_KEY || ''
+        if (WECOM_KEY) {
+            const { ensureLoggedIn } = require('./lib/login_check')
+            const loginResult = await ensureLoggedIn(ctrl, tasker, { wecomKey: WECOM_KEY, target: TARGET, log })
+            if (loginResult === 'timeout') {
+                log('⚠ 检测到掉登录态但等不到扫码授权，跳过本轮每日任务，关游戏等下个周期')
+                await killGame()
+                return // finally 仍会 destroy ctrl/res/tasker
+            }
+            // 'authorized'(刚扫码登录) 或 'already'(本就已登录) -> 继续跑每日任务
+        } else {
+            log('未设置 WECOM_KEY，跳过登录校验，直接跑每日任务')
+        }
+
         log('开始执行每日任务一键全完成:', ENTRY, `(超时 ${RUN_TIMEOUT_MS / 60000} 分钟)`)
         const job = tasker.post_task(ENTRY, OVERRIDE)
 

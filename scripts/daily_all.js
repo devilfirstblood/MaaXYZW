@@ -54,6 +54,10 @@ const OVERRIDE = {
     '宝箱_完成': { next: ['全日常_复位4'] },
     '黑市_完成': { next: ['全日常_复位5'] },
     '竞技场_完成': { next: ['全日常_复位6'] },
+    '每日任务_完成': { next: ['邮件_启动'] },   // 领奖完 -> 收邮件
+    '邮件_完成': { next: ['充值_启动'] },        // 收完邮件 -> 领福利
+    '充值_完成': { next: ['咸王_入口']},
+    '咸王_完成': { next: ['钓鱼_入口']},
 }
 
 function ts() {
@@ -89,6 +93,13 @@ async function runOnce() {
     tasker.resource = res
     tasker.controller = ctrl
 
+    // 节点级日志：每进入一个 pipeline 节点打印一行(便于观察长链执行进度、定位卡在哪个节点)。
+    // add_context_sink 监听任务执行上下文通知；PipelineNode.Starting = 刚命中并进入某节点、准备执行其识别/动作。
+    // sink 随 tasker.destroy() 一并清理，无需手动移除。
+    tasker.add_context_sink((_ctx, m) => {
+        if (m.msg === 'PipelineNode.Starting') log('  ▶', m.name)
+    })
+
     // 关游戏：优先用控制器 post_stop_app，失败兜底用 adb force-stop
     async function killGame() {
         try {
@@ -104,6 +115,8 @@ async function runOnce() {
             }
         }
     }
+
+    await killGame()
 
     try {
         // 跑每日任务前先做登录校验：掉登录态时走扫码授权流程，授权成功后再跑每日任务。

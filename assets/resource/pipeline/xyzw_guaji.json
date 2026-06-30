@@ -35,12 +35,6 @@
     "挂机_点前往加钟": {
         "recognition": "OCR",
         "expected": "前往加钟|加钟",
-        "roi": [
-            430,
-            840,
-            150,
-            60
-        ],
         "action": "Click",
         "post_delay": 2000,
         "next": [

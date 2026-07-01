@@ -75,6 +75,13 @@ async function runOnce() {
     tasker.resource = res
     tasker.controller = ctrl
 
+    // 节点级日志：每进入一个 pipeline 节点打印一行(便于观察一条龙执行进度、定位卡在哪个节点)。
+    // add_context_sink 监听任务执行上下文通知，PipelineNode.Starting = 命中并进入某节点、准备执行其识别/动作。
+    // sink 随 tasker.destroy() 一并清理，无需手动移除。
+    tasker.add_context_sink((_ctx, m) => {
+        if (m.msg === 'PipelineNode.Starting') log('  ▶', m.name)
+    })
+
     // 关游戏：优先用控制器 post_stop_app，失败兜底用 adb force-stop
     async function killGame() {
         try {
@@ -90,6 +97,8 @@ async function runOnce() {
             }
         }
     }
+
+    await killGame()
 
     try {
         // 跑一条龙前先做登录校验：掉登录态时走扫码授权流程，授权成功后再跑一条龙。

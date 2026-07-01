@@ -176,12 +176,6 @@
     "灯神1_领免费": {
         "recognition": "OCR",
         "expected": "^免费$",
-        "roi": [
-            510,
-            840,
-            140,
-            300
-        ],
         "action": "Click",
         "target": true,
         "post_delay": 2500,
@@ -219,12 +213,6 @@
     "灯神2_领免费": {
         "recognition": "OCR",
         "expected": "^免费$",
-        "roi": [
-            510,
-            840,
-            140,
-            300
-        ],
         "action": "Click",
         "target": true,
         "post_delay": 2500,
@@ -262,12 +250,6 @@
     "灯神3_领免费": {
         "recognition": "OCR",
         "expected": "^免费$",
-        "roi": [
-            510,
-            840,
-            140,
-            300
-        ],
         "action": "Click",
         "target": true,
         "post_delay": 2500,
@@ -305,12 +287,6 @@
     "灯神4_领免费": {
         "recognition": "OCR",
         "expected": "^免费$",
-        "roi": [
-            510,
-            840,
-            140,
-            300
-        ],
         "action": "Click",
         "target": true,
         "post_delay": 2500,
@@ -336,12 +312,6 @@
     "灯神_领扫荡券": {
         "recognition": "OCR",
         "expected": "扫荡",
-        "roi": [
-            520,
-            1040,
-            120,
-            90
-        ],
         "action": "Click",
         "post_delay": 2000,
         "next": [

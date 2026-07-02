@@ -453,3 +453,4 @@ tools/ImageCropper/**/*.png
 config
 debug
 .claude/
+docs/superpowers

@@ -70,7 +70,32 @@ const OVERRIDE = {
 function ts() {
     return new Date().toLocaleString('zh-CN', { hour12: false })
 }
-const log = (...a) => console.log(`[${ts()}]`, `[${TARGET}]`, ...a)
+
+// 环形日志缓冲：每行日志除了打印，也存进来，失败/超时告警时取最近若干条随企微消息发出。
+// 只留最近 LOG_BUFFER_MAX 条，避免长跑内存无限涨。
+const LOG_BUFFER_MAX = 50
+const logBuffer = []
+const log = (...a) => {
+    const line = `[${ts()}] [${TARGET}] ${a.map((x) => (typeof x === 'string' ? x : String(x))).join(' ')}`
+    console.log(line)
+    logBuffer.push(line)
+    if (logBuffer.length > LOG_BUFFER_MAX) logBuffer.shift()
+}
+
+// 账号 failed/timeout 时发企微告警：附最近 10 条执行日志。
+// 复用 login_check 的 sendTextToWecom；未设 WECOM_KEY 则不发(向后兼容)。发送失败只记日志、不影响主流程。
+const { ensureLoggedIn, sendTextToWecom } = require('./lib/login_check')
+async function alertFail(reason) {
+    const key = process.env.WECOM_KEY || ''
+    if (!key) return
+    const recent = logBuffer.slice(-10).join('\n')
+    const text = `【咸鱼-每日任务-${TARGET}】${reason}\n最近日志：\n${recent}`
+    try {
+        await sendTextToWecom(key, text)
+    } catch (e) {
+        log('发送失败告警到企微出错(忽略):', e.message ?? e)
+    }
+}
 
 // 跑一轮：每次新建连接/资源/tasker，跑完销毁，避免长时间持有句柄。
 // 一轮内多账号轮转（做完一个号→切到未做过的号→再做，最多 MAX_ACCOUNTS 个）。
@@ -132,7 +157,6 @@ async function runOnce() {
         // 设了 WECOM_KEY 才启用(需要发企微二维码提醒人工扫码)；未设则跳过，保持原有不带 key 也能跑。
         const WECOM_KEY = process.env.WECOM_KEY || ''
         if (WECOM_KEY) {
-            const { ensureLoggedIn } = require('./lib/login_check')
             const loginResult = await ensureLoggedIn(ctrl, tasker, { wecomKey: WECOM_KEY, target: TARGET, log })
             if (loginResult === 'timeout') {
                 log('⚠ 检测到掉登录态但等不到扫码授权，跳过本轮每日任务，关游戏等下个周期')
@@ -153,6 +177,7 @@ async function runOnce() {
             log(`==== 账号 ${i}/${MAX_ACCOUNTS}：入口 ${entry} ====`)
             const r = await runDailyChain(tasker, entry, OVERRIDE, RUN_TIMEOUT_MS, { log })
             log(`账号 ${i} 每日链结果: ${r}`)
+            if (r === 'failed' || r === 'timeout') await alertFail(`账号 ${i} 结果 ${r}`)
 
             // 链尾(钓鱼_完成)会自动回主界面，读顶部标题关卡数标识"刚做完的账号"
             const cur = await readTitleStage(ctrl, tasker)

@@ -118,7 +118,7 @@
             80
         ],
         "action": "Click",
-        "post_delay": 2500,
+        "post_delay": 3500,
         "next": [
             "盐罐_关奖励弹窗"
         ]

@@ -39,6 +39,7 @@ const maa = require(maaPath)
 const RESOURCE = path.resolve(__dirname, '..', 'assets', 'resource')
 const { readTitleStage, readSwitchSlots, switchToAccount } = require('./lib/switch_account')
 const { pickNextSlot } = require('./lib/account_rotation')
+const { runDati } = require('./lib/dati')
 
 const TARGET = process.argv[2] || 'emulator-5554' // 设备 name/address 包含匹配
 const DAILY_HOUR = Number(process.argv[3] ?? 8) // 每天执行的整点小时(0-23，默认 8 点)
@@ -187,6 +188,8 @@ async function runOnce() {
             log(`账号 ${i} 每日链结果: ${r}`)
             if (r === 'failed' || r === 'timeout') await alertFail(ctrl, `账号 ${i} 结果 ${r}`)
 
+            await runDatiIfMonday(ctrl, tasker, { log })
+
             // 链尾(钓鱼_完成)会自动回主界面，读顶部标题关卡数标识"刚做完的账号"
             const cur = await readTitleStage(ctrl, tasker)
             if (cur == null) {
@@ -248,6 +251,45 @@ async function runDailyChain(tasker, entry, override, timeoutMs, { log }) {
     }
     log('✗ 每日任务未成功 status=', detail && detail.status, 'nodes=', detail && detail.nodes.length)
     return 'failed'
+}
+
+// 「咸鱼大冲关」答题：题库提示该活动每周任务周一8点重置，只在周一跑。
+// 导航(答题_启动)+答题循环(runDati)+关结算弹窗(答题_确定)，跟 scripts/dati.js 独立脚本同一套流程，
+// 这里复用同一个 ctrl/tasker（当前账号已在主界面）。失败/超时用当天剩余次数重试(实测上限3次)，
+// 中途成功就提前停止。任何一步异常都只记日志、不向上抛，避免影响账号轮转继续往下走。
+async function runDatiIfMonday(ctrl, tasker, { log }) {
+    if (new Date().getDay() !== 1) return
+    log('今天是周一，跑「咸鱼大冲关」答题 ...')
+    try {
+        const dEnter = await tasker.post_task('答题_启动').wait().get()
+        if (!dEnter || dEnter.status !== 3000) {
+            log('✗ 未能进入答题页(是否在主界面？)，跳过答题')
+            return
+        }
+        const MAX_ATTEMPTS = 3
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            log(`==== 答题第 ${attempt}/${MAX_ATTEMPTS} 次尝试 ====`)
+            const r = await runDati(ctrl, tasker, { log })
+            log('本局结束:', JSON.stringify(r))
+
+            const dEnd = await tasker.post_task('答题_确定').wait().get()
+            log('点击「确定」结束答题页:', dEnd?.status === 3000 ? '成功' : '失败')
+
+            if (r.result === 'success') {
+                log('✅ 答题成功完成')
+                const dRece = await tasker.post_task('答题_任务').wait().get()
+                log('点击「领取奖励」:', dRece?.status === 3000 ? '成功' : '失败')
+                break
+            }
+            if (attempt === MAX_ATTEMPTS) log('已用完重试次数，停止答题')
+        }
+
+        // 退出答题页回主界面，后续账号轮转要靠主界面顶部标题读关卡数，不能停在答题活动页。
+        const dExit = await tasker.post_task('答题_返回').wait().get()
+        log('退出答题页回主界面:', dExit?.status === 3000 ? '成功' : '失败')
+    } catch (e) {
+        log('答题流程出错(忽略，继续后续流程):', e.message ?? e)
+    }
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))

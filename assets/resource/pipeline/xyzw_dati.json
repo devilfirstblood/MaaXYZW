@@ -1,0 +1,119 @@
+{
+    "答题_启动": {
+        "recognition": "OCR",
+        "expected": "^客厅$",
+        "roi": [
+            580,
+            1020,
+            120,
+            70
+        ],
+        "action": "Click",
+        "post_delay": 2500,
+        "next": [
+            "答题_入口"
+        ]
+    },
+    "答题_入口": {
+        "action": "Click",
+        "target": [
+            570,
+            490,
+            1,
+            1
+        ],
+        "post_delay": 2000,
+        "timeout": 3500,
+        "next": [
+            "确认_答题"
+        ]
+    },
+    "确认_答题": {
+        "recognition": "OCR",
+        "expected": "开始答题",
+        "action": "DoNothing",
+        "post_delay": 1500
+    },
+    "答题_确定": {
+        "recognition": "OCR",
+        "expected": "^确定$",
+        "action": "Click",
+        "post_delay": 1500
+    },
+    "答题_任务": {
+        "action": "Click",
+        "target": [
+            120,
+            850,
+            1,
+            1
+        ],
+        "post_delay": 1800,
+        "next": [
+            "答题_领取",
+            "答题_领完"
+        ]
+    },
+    "答题_领取": {
+        "recognition": "OCR",
+        "expected": "^领取$",
+        "action": "Click",
+        "post_delay": 1500,
+        "next": [
+            "答题_关弹窗"
+        ]
+    },
+    "答题_关弹窗": {
+        "action": "Click",
+        "target": [
+            360,
+            50,
+            1,
+            1
+        ],
+        "post_delay": 1000,
+        "next": [
+            "答题_领取",
+            "答题_领完"
+        ]
+    },
+    "答题_领完": {
+        "action": "Click",
+        "target": [
+            350,
+            1080,
+            1,
+            1
+        ],
+        "post_delay": 1500
+    },
+    "答题_返回": {
+        "action": "Click",
+        "target": [
+            65,
+            1239,
+            1,
+            1
+        ],
+        "post_delay": 1800,
+        "next": [
+            "答题_返回主界面"
+        ]
+    },
+    "答题_返回主界面": {
+        "action": "Click",
+        "target": [
+            48,
+            1152,
+            1,
+            1
+        ],
+        "post_delay": 1800,
+        "next": [
+            "答题_完成"
+        ]
+    },
+    "答题_完成": {
+        "action": "DoNothing"
+    }
+}

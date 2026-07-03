@@ -1,0 +1,77 @@
+{
+    "珍宝阁_启动": {
+        "recognition": "OCR",
+        "expected": "珍宝阁",
+        "action": "Click",
+        "target": true,
+        "post_delay": 2500,
+        "next": [
+            "确认珍宝阁",
+            "珍宝阁_启动"
+        ]
+    },
+    "确认珍宝阁": {
+        "recognition": "OCR",
+        "expected": "珍贵好物|限时兑换",
+        "roi": [
+            0,
+            0,
+            720,
+            400
+        ],
+        "action": "DoNothing",
+        "post_delay": 1500,
+        "timeout": 3500,
+        "next": [
+            "切每日好礼"
+        ]
+    },
+    "切每日好礼": {
+        "recognition": "OCR",
+        "expected": "每日好礼",
+        "action": "Click",
+        "post_delay": 1500,
+        "next": [
+            "珍宝阁_点领取",
+            "珍宝阁_返回"
+        ]
+    },
+    "珍宝阁_点领取": {
+        "recognition": "OCR",
+        "expected": "^领取$",
+        "action": "Click",
+        "post_delay": 1500,
+        "next": [
+            "珍宝阁_关闭弹窗"
+        ]
+    },
+    "珍宝阁_关闭弹窗": {
+        "action": "Click",
+        "target": [
+            48,
+            1152,
+            1,
+            1
+        ],
+        "post_delay": 1800,
+        "next": [
+            "珍宝阁_完成"
+        ]
+    },
+    "珍宝阁_返回": {
+        "action": "Click",
+        "target": [
+            48,
+            1152,
+            1,
+            1
+        ],
+        "post_delay": 1800,
+        "next": [
+            "珍宝阁_完成"
+        ]
+    },
+    "珍宝阁_完成": {
+        "action": "DoNothing"
+    }
+}

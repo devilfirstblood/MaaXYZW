@@ -65,6 +65,8 @@ const OVERRIDE = {
     '邮件_完成': { next: ['充值_启动'] },        // 收完邮件 -> 领福利
     '充值_完成': { next: ['咸王_入口']},
     '咸王_完成': { next: ['钓鱼_入口']},
+    '钓鱼_完成': { next: ['俱乐部_启动']},
+    '俱乐部_完成': { next: ['珍宝阁_启动']},
 }
 
 function ts() {
@@ -84,8 +86,8 @@ const log = (...a) => {
 
 // 账号 failed/timeout 时发企微告警：附最近 10 条执行日志。
 // 复用 login_check 的 sendTextToWecom；未设 WECOM_KEY 则不发(向后兼容)。发送失败只记日志、不影响主流程。
-const { ensureLoggedIn, sendTextToWecom } = require('./lib/login_check')
-async function alertFail(reason) {
+const { ensureLoggedIn, sendTextToWecom, sendImageToWecom } = require('./lib/login_check')
+async function alertFail(ctrl, reason) {
     const key = process.env.WECOM_KEY || ''
     if (!key) return
     const recent = logBuffer.slice(-10).join('\n')
@@ -94,6 +96,12 @@ async function alertFail(reason) {
         await sendTextToWecom(key, text)
     } catch (e) {
         log('发送失败告警到企微出错(忽略):', e.message ?? e)
+    }
+    try {
+        const shot = await ctrl.post_screencap().wait().get()
+        if (shot) await sendImageToWecom(key, shot)
+    } catch (e) {
+        log('发送失败告警截图到企微出错(忽略):', e.message ?? e)
     }
 }
 
@@ -177,7 +185,7 @@ async function runOnce() {
             log(`==== 账号 ${i}/${MAX_ACCOUNTS}：入口 ${entry} ====`)
             const r = await runDailyChain(tasker, entry, OVERRIDE, RUN_TIMEOUT_MS, { log })
             log(`账号 ${i} 每日链结果: ${r}`)
-            if (r === 'failed' || r === 'timeout') await alertFail(`账号 ${i} 结果 ${r}`)
+            if (r === 'failed' || r === 'timeout') await alertFail(ctrl, `账号 ${i} 结果 ${r}`)
 
             // 链尾(钓鱼_完成)会自动回主界面，读顶部标题关卡数标识"刚做完的账号"
             const cur = await readTitleStage(ctrl, tasker)

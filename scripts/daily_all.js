@@ -215,6 +215,8 @@ async function runOnce() {
             if (r === 'failed' || r === 'timeout') await alertFail(ctrl, `账号 ${i} 结果 ${r}(已重试)`)
 
             await runDatiIfMonday(ctrl, tasker, { log })
+            await runNiudanIfWeekday(ctrl, tasker, { log })
+            await runMengjingIfWeekday(ctrl, tasker, { log })
 
             // 链尾(钓鱼_完成)会自动回主界面，读顶部标题关卡数标识"刚做完的账号"
             const cur = await readTitleStage(ctrl, tasker)
@@ -315,6 +317,30 @@ async function runDatiIfMonday(ctrl, tasker, { log }) {
         log('退出答题页回主界面:', dExit?.status === 3000 ? '成功' : '失败')
     } catch (e) {
         log('答题流程出错(忽略，继续后续流程):', e.message ?? e)
+    }
+}
+
+// 「扭蛋工坊」免费领取：只在周二/四/六开放，直接跑一次，失败/异常只记日志不重试(与其他子流程一致)。
+async function runNiudanIfWeekday(ctrl, tasker, { log }) {
+    if (![2, 4, 6].includes(new Date().getDay())) return
+    log('今天是周二/四/六，跑「扭蛋」...')
+    try {
+        const r = await tasker.post_task('扭蛋_启动').wait().get()
+        log('扭蛋流程结束:', r?.status === 3000 ? '成功' : `未成功 status=${r && r.status}`)
+    } catch (e) {
+        log('扭蛋流程出错(忽略，继续后续流程):', e.message ?? e)
+    }
+}
+
+// 「咸王梦境」商人驿站购买：只在周一/三开放，直接跑一次，失败/异常只记日志不重试(与其他子流程一致)。
+async function runMengjingIfWeekday(ctrl, tasker, { log }) {
+    if (![1, 3].includes(new Date().getDay())) return
+    log('今天是周一/三，跑「梦境」...')
+    try {
+        const r = await tasker.post_task('梦境_入口').wait().get()
+        log('梦境流程结束:', r?.status === 3000 ? '成功' : `未成功 status=${r && r.status}`)
+    } catch (e) {
+        log('梦境流程出错(忽略，继续后续流程):', e.message ?? e)
     }
 }
 

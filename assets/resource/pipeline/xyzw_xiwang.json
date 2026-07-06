@@ -23,12 +23,6 @@
     "咸王_点每日考验": {
         "recognition": "OCR",
         "expected": "每日咸王考验",
-        "roi": [
-            30,
-            250,
-            360,
-            310
-        ],
         "action": "Click",
         "post_delay": 2500,
         "next": [

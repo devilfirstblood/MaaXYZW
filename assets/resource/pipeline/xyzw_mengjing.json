@@ -1,0 +1,326 @@
+{
+    "梦境_入口": {
+        "action": "Click",
+        "target": [
+            664,
+            1224,
+            1,
+            1
+        ],
+        "post_delay": 2500,
+        "next": [
+            "梦境_点咸王梦境",
+            "梦境_上滑"
+        ]
+    },
+    "梦境_上滑": {
+        "action": "Swipe",
+        "begin": [
+            360,
+            700
+        ],
+        "end": [
+            360,
+            1000
+        ],
+        "duration": 1000,
+        "post_delay": 1500,
+        "next": [
+            "梦境_点咸王梦境"
+        ]
+    },
+    "梦境_点咸王梦境": {
+        "recognition": "OCR",
+        "expected": "咸王梦境",
+        "action": "Click",
+        "post_delay": 2500,
+        "next": [
+            "确认_已跳转咸王梦境",
+            "梦境_商人驿站确认"
+        ]
+    },
+    "梦境_商人驿站确认": {
+        "recognition": "OCR",
+        "expected": "商人驿站",
+        "action": "Click",
+        "post_delay": 1500,
+        "next": [
+            "梦境_确认初级商人"
+        ]
+    },
+    "梦境_确认初级商人": {
+        "recognition": "OCR",
+        "expected": "初级商人",
+        "action": "DoNothing",
+        "post_delay": 1500,
+        "next": [
+            "梦境_切中级商人"
+        ]
+    },
+    // ===== 购买中级商人 =====
+    "梦境_切中级商人": {
+        "recognition": "OCR",
+        "expected": "中级商人",
+        "action": "Click",
+        "post_delay": 1500,
+        "next": [
+            "梦境_购买物品",
+            "梦境_切高级商人"
+        ]
+    },
+    // ===== 购买物品 =====
+    "梦境_购买物品": {
+        "recognition": "OCR",
+        "expected": "随机紫将碎片|随机橙将碎片",
+        "action": "Click",
+        "target_offset": [
+            0,
+            200,
+            1,
+            1
+        ],
+        "post_delay": 1500,
+        "next": [
+            "梦境_确认购买物品"
+        ]
+    },
+    "梦境_确认购买物品": {
+        "recognition": "OCR",
+        "expected": "^确认购买$",
+        "action": "DoNothing",
+        "post_delay": 1500,
+        "next": [
+            "确定购买物品"
+        ]
+    },
+    "确定购买物品": {
+        "recognition": "OCR",
+        "expected": "^确定$",
+        "action": "Click",
+        "post_delay": 1500,
+        "next": [
+            "购买物品关闭弹窗"
+        ]
+    },
+    "购买物品关闭弹窗": {
+        "action": "Click",
+        "target": [
+            360,
+            60,
+            1,
+            1
+        ],
+        "post_delay": 1000,
+        "next": [
+            "梦境_购买物品",
+            "梦境_切高级商人"
+        ]
+    },
+    // ===== 购买高级商人 =====
+    "梦境_切高级商人": {
+        "recognition": "OCR",
+        "expected": "高级商人",
+        "action": "Click",
+        "post_delay": 1500,
+        "next": [
+            "梦境_购买黄金鱼竿",
+            "梦境_购买铂金宝箱",
+            "梦境_返回1"
+        ]
+    },
+    // ===== 购买铂金宝箱 =====
+    "梦境_购买铂金宝箱": {
+        "recognition": "OCR",
+        "expected": "^铂金宝箱$",
+        "action": "Click",
+        "target_offset": [
+            0,
+            200,
+            1,
+            1
+        ],
+        "post_delay": 1500,
+        "next": [
+            "梦境_确认购买铂金宝箱"
+        ]
+    },
+    "梦境_确认购买铂金宝箱": {
+        "recognition": "OCR",
+        "expected": "^确认购买$",
+        "action": "DoNothing",
+        "post_delay": 1500,
+        "next": [
+            "确定购买铂金宝箱"
+        ]
+    },
+    "确定购买铂金宝箱": {
+        "recognition": "OCR",
+        "expected": "^确定$",
+        "action": "Click",
+        "post_delay": 1500,
+        "next": [
+            "购买_关闭弹窗"
+        ]
+    },
+    // ===== 购买黄金鱼竿 =====
+    "梦境_购买黄金鱼竿": {
+        "recognition": "OCR",
+        "expected": "^黄金鱼竿$",
+        "action": "Click",
+        "target_offset": [
+            0,
+            200,
+            1,
+            1
+        ],
+        "post_delay": 1500,
+        "next": [
+            "梦境_确认购买黄金鱼竿"
+        ]
+    },
+    "梦境_确认购买黄金鱼竿": {
+        "recognition": "OCR",
+        "expected": "^确认购买$",
+        "action": "DoNothing",
+        "post_delay": 1500,
+        "next": [
+            "确定购买黄金鱼竿"
+        ]
+    },
+    "确定购买黄金鱼竿": {
+        "recognition": "OCR",
+        "expected": "^确定$",
+        "action": "Click",
+        "post_delay": 1500,
+        "next": [
+            "购买_关闭弹窗"
+        ]
+    },
+    "购买_关闭弹窗": {
+        "action": "Click",
+        "target": [
+            360,
+            60,
+            1,
+            1
+        ],
+        "post_delay": 1000,
+        "next": [
+            "梦境_购买铂金宝箱",
+            "梦境_购买黄金鱼竿",
+            "梦境_返回1"
+        ]
+    },
+    "确认_已跳转咸王梦境": {
+        "recognition": "OCR",
+        "expected": "选择出场咸将",
+        "action": "DoNothing",
+        "post_delay": 1500,
+        "next": [
+            "梦境_选择咸将"
+        ]
+    },
+    "梦境_选择咸将": {
+        "action": "Click",
+        "target": [
+            130,
+            430,
+            1,
+            1
+        ],
+        "post_delay": 1000,
+        "next": [
+            "梦境_点确定"
+        ]
+    },
+    "梦境_点确定": {
+        "recognition": "OCR",
+        "expected": "^确定$",
+        "action": "Click",
+        "post_delay": 1500,
+        "next": [
+            "梦境_确认出场提示"
+        ]
+    },
+    "梦境_确认出场提示": {
+        "recognition": "OCR",
+        "expected": "出场提示",
+        "action": "DoNothing",
+        "post_delay": 1500,
+        "next": [
+            "梦境_确定出场"
+        ]
+    },
+    "梦境_确定出场": {
+        "recognition": "OCR",
+        "expected": "^确定$",
+        "roi": [
+            250,
+            740,
+            250,
+            88
+        ],
+        "action": "Click",
+        "post_delay": 3500,
+        "next": [
+            "梦境_关闭弹窗"
+        ]
+    },
+    "梦境_关闭弹窗": {
+        "action": "Click",
+        "target": [
+            360,
+            60,
+            1,
+            1
+        ],
+        "post_delay": 1000,
+        "next": [
+            "梦境_商人驿站确认"
+        ]
+    },
+    // ===== 收尾
+    "梦境_返回1": {
+        "action": "Click",
+        "target": [
+            60,
+            1188,
+            1,
+            1
+        ],
+        "post_delay": 1500,
+        "next": [
+            "梦境_返回2"
+        ]
+    },
+    "梦境_返回2": {
+        "action": "Click",
+        "target": [
+            60,
+            1188,
+            1,
+            1
+        ],
+        "post_delay": 1500,
+        "next": [
+            "梦境_主界面"
+        ]
+    },
+    "梦境_主界面": {
+        "action": "Click",
+        "target": [
+            664,
+            1224,
+            1,
+            1
+        ],
+        "post_delay": 1500,
+        "next": [
+            "梦境_完成"
+        ]
+    },
+    // 完成（咸王考验 + 灯神领取 + 扫荡券都完成，已回主界面）
+    "梦境_完成": {
+        "action": "DoNothing"
+    }
+}

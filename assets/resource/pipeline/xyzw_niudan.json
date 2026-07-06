@@ -1,51 +1,57 @@
 {
-    "珍宝阁_启动": {
+    "扭蛋_启动": {
         "recognition": "OCR",
-        "expected": "珍宝阁",
+        "expected": "限时活动",
         "action": "Click",
         "target": true,
         "post_delay": 2500,
         "next": [
-            "确认珍宝阁",
-            "珍宝阁_启动"
+            "确认限时活动",
+            "扭蛋_启动"
         ]
     },
-    "确认珍宝阁": {
+    "确认限时活动": {
         "recognition": "OCR",
-        "expected": "珍贵好物|限时兑换",
+        "expected": "日活动|月度活动",
         "roi": [
             0,
             0,
             720,
-            400
+            160
         ],
         "action": "DoNothing",
         "post_delay": 1500,
         "timeout": 3500,
         "next": [
-            "切每日好礼"
+            "切每日活动"
         ]
     },
-    "切每日好礼": {
+    "切每日活动": {
         "recognition": "OCR",
-        "expected": "每日好礼",
+        "expected": "扭蛋工坊",
         "action": "Click",
         "post_delay": 1500,
         "next": [
-            "珍宝阁_点领取",
-            "珍宝阁_返回"
+            "扭蛋_点领取",
+            "扭蛋_返回"
         ]
     },
-    "珍宝阁_点领取": {
+    "扭蛋_点领取": {
         "recognition": "OCR",
-        "expected": "^领取$",
+        "expected": "^免费$",
+        "roi": [
+            330,
+            970,
+            110,
+            82
+        ],
         "action": "Click",
         "post_delay": 1500,
         "next": [
-            "珍宝阁_关闭弹窗"
+            "扭蛋_关闭弹窗"
         ]
     },
-    "珍宝阁_关闭弹窗": {
+    "扭蛋_关闭弹窗": {
         "action": "Click",
         "target": [
             60,
@@ -55,10 +61,10 @@
         ],
         "post_delay": 1800,
         "next": [
-            "珍宝阁_返回"
+            "扭蛋_返回"
         ]
     },
-    "珍宝阁_返回": {
+    "扭蛋_返回": {
         "action": "Click",
         "target": [
             60,
@@ -68,10 +74,10 @@
         ],
         "post_delay": 1800,
         "next": [
-            "珍宝阁_完成"
+            "扭蛋_完成"
         ]
     },
-    "珍宝阁_完成": {
+    "扭蛋_完成": {
         "action": "DoNothing"
     }
 }

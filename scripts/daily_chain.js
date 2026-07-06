@@ -138,22 +138,48 @@ async function runOnce() {
         }
     }
 
+    // 登录校验：掉登录态时走扫码授权流程；未设 WECOM_KEY 或本就已登录则直接放行。
+    // 返回 false 表示掉登录且等不到扫码授权，调用方应放弃继续。
+    async function checkLogin() {
+        const WECOM_KEY = process.env.WECOM_KEY || ''
+        if (!WECOM_KEY) {
+            log('未设置 WECOM_KEY，跳过登录校验，直接跑一条龙')
+            return true
+        }
+        const loginResult = await ensureLoggedIn(ctrl, tasker, { wecomKey: WECOM_KEY, target: TARGET, log })
+        if (loginResult === 'timeout') {
+            log('⚠ 检测到掉登录态但等不到扫码授权')
+            return false
+        }
+        return true // 'authorized'(刚扫码登录) 或 'already'(本就已登录)
+    }
+
+    // 跑一个账号的一条龙，failed/timeout 时自动重试一次：重试从 killGame（强制关游戏重启）开始，
+    // 重新走登录校验 + 冷启动入口(CHAIN_ENTRY_FIRST，因为killGame后不能再热接入)。
+    // 两次都不成功才把最终结果报给调用方(由调用方决定是否 alertFail)。
+    async function runAccountWithRetry(entry, i) {
+        const r = await runChainOnce(tasker, entry, RUN_TIMEOUT_MS, { log })
+        if (r !== 'failed' && r !== 'timeout') return r
+
+        log(`⚠ 账号 ${i} 一条龙${r === 'timeout' ? '超时' : '失败'}，重试一次(先关游戏重启)...`)
+        await killGame()
+        if (!(await checkLogin())) {
+            log('重试前登录校验未通过(掉登录且等不到授权)，放弃本次重试')
+            return r
+        }
+        const r2 = await runChainOnce(tasker, CHAIN_ENTRY_FIRST, RUN_TIMEOUT_MS, { log })
+        log(`账号 ${i} 重试结果: ${r2}`)
+        return r2
+    }
+
     await killGame()
 
     try {
         // 跑一条龙前先做登录校验：掉登录态时走扫码授权流程，授权成功后再跑一条龙。
-        // 设了 WECOM_KEY 才启用(需要发企微二维码提醒人工扫码)；未设则跳过，保持原有不带 key 也能跑。
-        const WECOM_KEY = process.env.WECOM_KEY || ''
-        if (WECOM_KEY) {
-            const loginResult = await ensureLoggedIn(ctrl, tasker, { wecomKey: WECOM_KEY, target: TARGET, log })
-            if (loginResult === 'timeout') {
-                log('⚠ 检测到掉登录态但等不到扫码授权，跳过本轮一条龙，关游戏等下个周期')
-                await killGame()
-                return // finally 仍会 destroy ctrl/res/tasker
-            }
-            // 'authorized'(刚扫码登录) 或 'already'(本就已登录) -> 继续跑一条龙
-        } else {
-            log('未设置 WECOM_KEY，跳过登录校验，直接跑一条龙')
+        if (!(await checkLogin())) {
+            log('跳过本轮一条龙，关游戏等下个周期')
+            await killGame()
+            return // finally 仍会 destroy ctrl/res/tasker
         }
 
         // ==== 多账号轮转：做完一个号 → 切到未做过的号 → 再做，最多 MAX_ACCOUNTS 个 ====
@@ -164,9 +190,9 @@ async function runOnce() {
         let entry = CHAIN_ENTRY_FIRST // 账号1冷启动，之后热接入
         for (let i = 1; i <= MAX_ACCOUNTS; i++) {
             log(`==== 账号 ${i}/${MAX_ACCOUNTS}：入口 ${entry} ====`)
-            const r = await runChainOnce(tasker, entry, RUN_TIMEOUT_MS, { log })
+            const r = await runAccountWithRetry(entry, i)
             log(`账号 ${i} 一条龙结果: ${r}`)
-            if (r === 'failed' || r === 'timeout') await alertFail(ctrl, `账号 ${i} 结果 ${r}`)
+            if (r === 'failed' || r === 'timeout') await alertFail(ctrl, `账号 ${i} 结果 ${r}(已重试)`)
 
             // 链尾停在主界面，读顶部标题关卡数标识"刚做完的账号"
             const cur = await readTitleStage(ctrl, tasker)

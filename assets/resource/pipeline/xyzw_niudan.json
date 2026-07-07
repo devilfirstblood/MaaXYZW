@@ -38,7 +38,7 @@
     },
     "扭蛋_点领取": {
         "recognition": "OCR",
-        "expected": "^免费$",
+        "expected": "免费",
         "roi": [
             330,
             970,
@@ -46,7 +46,7 @@
             82
         ],
         "action": "Click",
-        "post_delay": 1500,
+        "post_delay": 4500,
         "next": [
             "扭蛋_关闭弹窗"
         ]

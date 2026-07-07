@@ -28,6 +28,15 @@
     },
     "切每日活动": {
         "recognition": "OCR",
+        "expected": "日活动",
+        "action": "Click",
+        "post_delay": 1500,
+        "next": [
+            "切扭蛋工坊"
+        ]
+    },
+    "切扭蛋工坊": {
+        "recognition": "OCR",
         "expected": "扭蛋工坊",
         "action": "Click",
         "post_delay": 1500,

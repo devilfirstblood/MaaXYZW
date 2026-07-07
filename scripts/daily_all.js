@@ -222,6 +222,7 @@ async function runOnce() {
             const cur = await readTitleStage(ctrl, tasker)
             if (cur == null) {
                 log('⚠ 读不到标题关卡数(可能未回到主界面/超时卡住)，停止多账号轮转')
+                await alertFail(ctrl, `账号 ${i} 读不到标题关卡数，可能未回到主界面/超时卡住`)
                 break
             }
             visited.add(cur)

@@ -205,7 +205,7 @@ async function runOnce() {
 
             if (i >= MAX_ACCOUNTS) break
 
-            const slots = await readSwitchSlots(ctrl, tasker)
+            const slots = await readSwitchSlots(ctrl, tasker, { log })
             const slot = pickNextSlot(slots, visited)
             if (!slot) {
                 log('无未做过的切换位，多账号轮转结束')

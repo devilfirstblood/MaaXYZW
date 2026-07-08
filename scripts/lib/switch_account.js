@@ -15,7 +15,7 @@
 const ENTRY = '切号_点头像' // 切号 pipeline 入口（assets/resource/pipeline/xyzw_switch_account.json）
 
 // 标题关卡数 OCR 区域：屏幕顶部中间「第XXXX关」大字（720 缩放系）。
-const TITLE_ROI = [240, 195, 240, 40]
+const TITLE_ROI = [240, 165, 240, 40]
 // 两个切换位头像下方关卡数文字所在大区（同时覆盖左、右两个「第XXXX关」小字）。
 const SLOT_ROI = [150, 240, 420, 50]
 // 两个切换位头像的点击坐标（头像本体中心，关弹窗前的可点热区）。
@@ -57,9 +57,9 @@ async function readTitleStage(ctrl, tasker) {
     return null
 }
 
-// 读两个切换位（左/右头像）的关卡数与点击坐标。
+// 读两个切换位（左/右头像）的关卡数与点击坐标（单次 OCR）。
 // 返回 [{ side:'left'|'right', stage:Number, target:[x,y,w,h] }, ...]（只含 OCR 出关卡数的位）。
-async function readSwitchSlots(ctrl, tasker) {
+async function readSwitchSlotsOnce(ctrl, tasker) {
     const all = await ocrAll(ctrl, tasker, SLOT_ROI, '第.*')
     const slots = []
     for (const b of all) {
@@ -72,6 +72,33 @@ async function readSwitchSlots(ctrl, tasker) {
     // 去重：同一侧 OCR 可能多行命中，保留每侧第一个
     const seen = new Set()
     return slots.filter((s) => (seen.has(s.side) ? false : (seen.add(s.side), true)))
+}
+
+// 读两个切换位，带稳定性重试。
+// 切号轮换后画面可能还没稳定，单次 OCR 常只读到一侧（另一侧关卡数漏识别），
+// 若直接据此判「无未做位」会提前终止轮转、漏做账号（曾出现做完 2 号就停、第 3 号没切）。
+// 故读到 1 个位时要求重读到 expectCount(默认2)个才算稳定，不足则等待重读，最多 retries+1 次；
+// 到最后仍不足就返回读到最多的那次。
+//
+// 读到 0 个位则直接返回、不重试：切换位区域完全没号 = 单账号（没有其它号可切），
+// 死等只会每轮白白浪费 retries*gapMs。代价是「多账号但某次两侧同时漏读(读到0个)」会被误当单账号，
+// 但两侧同时漏读远比漏读一侧罕见（实测漏号故障都是读到1个、漏第3个号），此权衡换单账号不空等。
+// opts: { retries=3, gapMs=1500, expectCount=2, log=console.log }
+async function readSwitchSlots(ctrl, tasker, opts = {}) {
+    const { retries = 3, gapMs = 1500, expectCount = 2, log = console.log } = opts
+    let best = []
+    for (let i = 0; i <= retries; i++) {
+        const slots = await readSwitchSlotsOnce(ctrl, tasker)
+        if (slots.length > best.length) best = slots
+        if (slots.length >= expectCount) return slots
+        if (slots.length === 0) return slots // 一个位都没有 = 单账号，不重试直接返回
+        if (i < retries) {
+            log(`  读切换位(第${i + 1}次): 仅读到 ${slots.length} 个位(期望 ${expectCount})，等待重读 ...`)
+            await sleep(gapMs)
+        }
+    }
+    log(`  读切换位重试结束，最终读到 ${best.length} 个位`)
+    return best
 }
 
 // 切到指定切换位：跑切号 pipeline 点该位头像 + 关弹窗 + 回主界面，

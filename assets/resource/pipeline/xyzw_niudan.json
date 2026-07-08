@@ -1,0 +1,92 @@
+{
+    "扭蛋_启动": {
+        "recognition": "OCR",
+        "expected": "限时活动",
+        "action": "Click",
+        "target": true,
+        "post_delay": 2500,
+        "next": [
+            "确认限时活动",
+            "扭蛋_启动"
+        ]
+    },
+    "确认限时活动": {
+        "recognition": "OCR",
+        "expected": "日活动|月度活动",
+        "roi": [
+            0,
+            0,
+            720,
+            160
+        ],
+        "action": "DoNothing",
+        "post_delay": 1500,
+        "timeout": 3500,
+        "next": [
+            "切每日活动"
+        ]
+    },
+    "切每日活动": {
+        "recognition": "OCR",
+        "expected": "日活动",
+        "action": "Click",
+        "post_delay": 1500,
+        "next": [
+            "切扭蛋工坊"
+        ]
+    },
+    "切扭蛋工坊": {
+        "recognition": "OCR",
+        "expected": "扭蛋工坊",
+        "action": "Click",
+        "post_delay": 1500,
+        "next": [
+            "扭蛋_点领取",
+            "扭蛋_返回"
+        ]
+    },
+    "扭蛋_点领取": {
+        "recognition": "OCR",
+        "expected": "免费",
+        "roi": [
+            330,
+            970,
+            110,
+            82
+        ],
+        "action": "Click",
+        "post_delay": 4500,
+        "next": [
+            "扭蛋_关闭弹窗"
+        ]
+    },
+    "扭蛋_关闭弹窗": {
+        "action": "Click",
+        "target": [
+            60,
+            1188,
+            1,
+            1
+        ],
+        "post_delay": 1800,
+        "next": [
+            "扭蛋_返回"
+        ]
+    },
+    "扭蛋_返回": {
+        "action": "Click",
+        "target": [
+            60,
+            1188,
+            1,
+            1
+        ],
+        "post_delay": 1800,
+        "next": [
+            "扭蛋_完成"
+        ]
+    },
+    "扭蛋_完成": {
+        "action": "DoNothing"
+    }
+}

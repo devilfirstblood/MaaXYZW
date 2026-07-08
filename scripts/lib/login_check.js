@@ -149,7 +149,19 @@ async function ensureLoggedIn(ctrl, tasker, opts = {}) {
             .post_recognition('OCR', { expected: '授权成功', roi: [0, 0, 720, 1280] }, shot)
             .wait()
             .get()
-        if (od && od.status === 3000) {
+        // ★ 判命中要看识别节点的 reco.hit，不能看任务级 status：
+        //   post_recognition().get() 返回的是任务 detail，其 status===3000 只表示“这次识别任务跑完了”，
+        //   与 expected 是否匹配无关——没命中也会是 3000。用它判定会导致一进循环就误判“授权成功”。
+        //   （与本模块前半段判断登录页的写法一致，都靠 node_detail 的 reco.hit。）
+        let authorized = false
+        for (const nodeId of od.nodes ?? []) {
+            const nd = tasker.node_detail(nodeId)
+            if (nd && nd.reco && nd.reco.hit) {
+                authorized = true
+                break
+            }
+        }
+        if (authorized) {
             log('✓ 检测到扫码授权成功')
             // 切回咸鱼之王（扫码工具会停在"授权成功 跳转中"，主动拉回游戏更稳）
             log('切回咸鱼之王:', PACKAGE)

@@ -67,12 +67,12 @@ GUI 任务列表（以 `assets/interface.json` 的 `task` 为准）：
 - 赠送好友金币、进行 2 次招募、进行 3 次点金、开启 3 次宝箱、黑市购买 1 次、竞技场战斗 3 次、钓鱼普通捕获 3 次
 - 每日任务领奖（领任务奖 + 周 / 日活跃宝箱）
 - 收邮件、领福利活动（签到 + 每日特惠 + 尊享福利卡）、每日咸王考验
-- **每日任务一键全完成**：串成一条链，启动 → 任务页 → 各子任务（已完成的自动跳过）→ 统一领奖 → 收邮件 → 领福利 → 咸王 → 钓鱼
+- **每日任务一键全完成**：串成一条链，启动 → 任务页 → 各子任务（已完成的自动跳过）→ 统一领奖 → 收邮件 → 领福利 → 咸王 → 钓鱼 → 俱乐部 → 珍宝阁（对应定时脚本 [`daily_all.js`](#定时无人值守-scripts)）
 
 **挂机产出**
 
 - 挂机领取、盐罐加时 + 领奖
-- **一条龙**：启动游戏 → 挂机领取 → 盐罐加时 + 领奖 → 退出游戏
+- **一条龙**：启动游戏 → 挂机领取 → 盐罐加时 + 领奖 → 回主界面（对应定时脚本 [`daily_chain.js`](#定时无人值守-scripts)）
 
 **账号 / 登录**
 
@@ -82,35 +82,36 @@ GUI 任务列表（以 `assets/interface.json` 的 `task` 为准）：
 
 ## 定时无人值守（`scripts/`）
 
-GUI 之外的无人值守自动化用 `scripts/` 下的 Node 脚本驱动——直接调用 maa-node binding，每轮新建连接 / 资源 / tasker，跑完销毁，带单轮超时关游戏兜底：
+GUI 之外的无人值守自动化用 `scripts/` 下的 Node 脚本驱动，核心是 `daily_all.js`（每日任务）和 `daily_chain.js`（一条龙挂机）：
 
-| 脚本 | 说明 | 入口 |
+| 功能 | `daily_all.js` | `daily_chain.js` |
 | --- | --- | --- |
-| `daily_chain.js` | 「一条龙」（挂机 + 盐罐），默认每 8 小时循环 | `咸鱼_启动游戏` + override |
-| `daily_all.js` | 「每日任务一键全完成」，每天定点执行 | `全日常_启动` + override |
-| `account_login.js` | 独立的「微信登录」掉线检测与二维码提醒 | `微信登录_启动` |
-
-用法 / 参数见各脚本头部注释，例如：
+| 对应任务 | 每日任务一键全完成（赠送金币 → 招募 → 点金 → 宝箱 → 黑市 → 竞技场 → 领奖 → 收邮件 → 领福利 → 咸王 → 钓鱼 → 俱乐部 → 珍宝阁） | 一条龙（挂机领取 + 盐罐加时/领奖） |
+| 执行周期 | 每天定点执行一次 | 每天固定几个整点各执行一次 |
+| 周期性专属活动 | 按星期自动跑：周一答题、周二/四/六扭蛋、周一/三梦境 | — |
+| 多账号轮转 | ✅ 一轮内最多 3 个账号 | ✅ 一轮内最多 3 个账号 |
+| 失败自动重试 | ✅ | ✅ |
+| 单账号超时保护 | ✅ 默认 15 分钟 | ✅ 默认 10 分钟 |
+| 掉登录自动代登录 | ✅ | ✅ |
+| 企微失败告警 | ✅ | ✅ |
 
 ```bash
 node scripts/daily_all.js                 # 默认设备 emulator-5554，每天 8:00 执行
 node scripts/daily_all.js 16384 13        # 指定设备(name/address 包含匹配) + 每天 13:00
 node scripts/daily_all.js 16384 8 once    # 立即只跑一次，不循环
 
-node scripts/daily_chain.js               # 默认每 8 小时跑一次一条龙
-node scripts/daily_chain.js emulator-5554 4   # 指定设备 + 间隔小时数
+node scripts/daily_chain.js                        # 默认设备 emulator-5554，每天 1/9/17 点各执行一次
+node scripts/daily_chain.js emulator-5554 6,14,22   # 指定设备 + 自定义每天执行的整点小时列表
+node scripts/daily_chain.js emulator-5554 1,9,17 once   # 立即只跑一次，不循环
 ```
 
-脚本默认设备 `emulator-5554`，统一强制标准 adb 截图（`screencap=4`）+ `screenshot_target_short_side=720`（应对 MuMu 多开横屏问题）。
+多模拟器场景可分别用各自 address/name 起多个进程同时跑多台。更多参数（超时分钟数等）见各脚本头部注释。
+
+其余脚本：`account_login.js` 是独立的「微信登录」掉线检测与二维码提醒工具（不跑业务任务）。
 
 ### 掉登录自动代登录
 
-`daily_chain.js` / `daily_all.js` 跑任务**前**会复用共享模块 [`scripts/lib/login_check.js`](scripts/lib/login_check.js) 的 `ensureLoggedIn()` 检测登录态：
-
-- 已登录则直接跑任务；
-- 掉登录则先关后启扫码工具 `com.willh.wz`（刷新二维码）→ 截二维码发企微群 → 轮询 OCR「授权成功」→ 切回咸鱼并等主界面就绪后再跑任务。
-
-需设置环境变量 `WECOM_KEY`（企微机器人 key）才发二维码；**定时脚本未设 key 则跳过登录校验直接跑**（向后兼容）。扫码工具 APK 见 [`apk/GameWxQRlogin-xyzw.apk`](apk/)。
+`daily_chain.js` / `daily_all.js` 跑任务**前**都会先检测登录态：已登录直接跑任务；掉登录则自动刷新二维码、发到企微群、等人工扫码授权成功后再继续。需设置环境变量 `WECOM_KEY`（企微机器人 key）才会发二维码/告警；未设置则跳过登录校验直接跑（向后兼容）。扫码工具 APK 见 [`apk/GameWxQRlogin-xyzw.apk`](apk/)。
 
 ## 项目结构
 

@@ -214,6 +214,7 @@ async function runOnce() {
             const ok = await switchToAccount(ctrl, tasker, slot, { log })
             if (!ok) {
                 log('✗ 切号失败，停止多账号轮转')
+                await alertFail(ctrl, `账号 ${i} 切号失败，停止多账号轮转`)
                 break
             }
             entry = CHAIN_ENTRY_NEXT

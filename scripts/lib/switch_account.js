@@ -15,7 +15,7 @@
 const ENTRY = '切号_点头像' // 切号 pipeline 入口（assets/resource/pipeline/xyzw_switch_account.json）
 
 // 标题关卡数 OCR 区域：屏幕顶部中间「第XXXX关」大字（720 缩放系）。
-const TITLE_ROI = [240, 165, 240, 40]
+const TITLE_ROI = [240, 165, 240, 65]
 // 两个切换位头像下方关卡数文字所在大区（同时覆盖左、右两个「第XXXX关」小字）。
 const SLOT_ROI = [150, 240, 420, 50]
 // 两个切换位头像的点击坐标（头像本体中心，关弹窗前的可点热区）。
@@ -69,6 +69,7 @@ async function readSwitchSlotsOnce(ctrl, tasker) {
         if (cx < SPLIT_X) slots.push({ side: 'left', stage, target: LEFT_SLOT })
         else slots.push({ side: 'right', stage, target: RIGHT_SLOT })
     }
+    console.log(`  OCR 切换位: 读到 ${slots.length} 个位: 左=${slots.find((s) => s.side === 'left')?.stage ?? '无'} 右=${slots.find((s) => s.side === 'right')?.stage ?? '无'}`)
     // 去重：同一侧 OCR 可能多行命中，保留每侧第一个
     const seen = new Set()
     return slots.filter((s) => (seen.has(s.side) ? false : (seen.add(s.side), true)))

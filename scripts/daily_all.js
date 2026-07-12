@@ -67,7 +67,6 @@ const OVERRIDE = {
     '充值_完成': { next: ['咸王_入口']},
     '咸王_完成': { next: ['钓鱼_入口']},
     '钓鱼_完成': { next: ['俱乐部_启动']},
-    '俱乐部_完成': { next: ['珍宝阁_启动']},
 }
 
 function ts() {
@@ -324,6 +323,8 @@ async function runDatiIfMonday(ctrl, tasker, { log }) {
 
 // 「扭蛋工坊」免费领取：只在周二/四/六开放，直接跑一次，失败/异常只记日志不重试(与其他子流程一致)。
 async function runNiudanIfWeekday(ctrl, tasker, { log }) {
+    const r1 = await tasker.post_task('珍宝阁_启动').wait().get()
+    log('珍宝阁_启动:', r1?.status === 3000 ? '成功' : `未成功 status=${r1 && r1.status}`)
     if (![2, 4, 6].includes(new Date().getDay())) return
     log('今天是周二/四/六，跑「扭蛋」...')
     try {

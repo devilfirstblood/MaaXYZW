@@ -243,7 +243,8 @@ async function runOnce() {
             }
             entry = ENTRY_NEXT
         }
-        // 收尾不关游戏，留前台(下轮开头 killGame 会清干净)
+        // 收尾关游戏：所有账号跑完后关掉，不留前台
+        await killGame()
     } finally {
         tasker.destroy()
         res.destroy()

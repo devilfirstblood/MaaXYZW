@@ -5,6 +5,8 @@
 //
 // 单轮超时保护：每个账号各自限时 15 分钟，某账号超时(未拿到 status=3000)则中止该账号流水线，
 // 尝试继续切下一个号；不关游戏(账号间/收尾都不关，仅开头冷启动前关一次)。
+// 首次失败或超时后会关游戏冷启动一次，并按本账号内存检查点从尚未完成的任务段继续；
+// 检查点不跨账号和定时轮次。
 //
 // 多账号：一轮内做完当前号 → 读标题关卡数去重 → 挑未做过的切换位切号 → 再做，最多 3 个
 //   (复用 lib/switch_account.js + lib/account_rotation.js；无其它账号时只做 1 个，向后兼容)。
@@ -40,6 +42,7 @@ const RESOURCE = path.resolve(__dirname, '..', 'assets', 'resource')
 const { readTitleStage, readSwitchSlots, switchToAccount } = require('./lib/switch_account')
 const { pickNextSlot } = require('./lib/account_rotation')
 const { runDati } = require('./lib/dati')
+const { createDailyResumeCheckpoint } = require('./lib/daily_resume')
 
 const TARGET = process.argv[2] || 'emulator-5554' // 设备 name/address 包含匹配
 const DAILY_HOUR = Number(process.argv[3] ?? 8) // 每天执行的整点小时(0-23，默认 8 点)
@@ -138,8 +141,11 @@ async function runOnce() {
     // 节点级日志：每进入一个 pipeline 节点打印一行(便于观察长链执行进度、定位卡在哪个节点)。
     // add_context_sink 监听任务执行上下文通知；PipelineNode.Starting = 刚命中并进入某节点、准备执行其识别/动作。
     // sink 随 tasker.destroy() 一并清理，无需手动移除。
+    let activeDailyResumeCheckpoint = null
     tasker.add_context_sink((_ctx, m) => {
-        if (m.msg === 'PipelineNode.Starting') log('  ▶', m.name)
+        if (m.msg !== 'PipelineNode.Starting') return
+        log('  ▶', m.name)
+        activeDailyResumeCheckpoint?.observeNode(m.name)
     })
 
     // 关游戏：优先用控制器 post_stop_app，失败兜底用 adb force-stop
@@ -175,21 +181,48 @@ async function runOnce() {
     }
 
     // 跑一个账号的每日任务，failed/timeout 时自动重试一次：重试从 killGame（强制关游戏重启）开始，
-    // 重新走登录校验 + 冷启动入口(ENTRY_FIRST，因为killGame后不能再热接入)。
+    // 重新走登录校验后优先按本账号内存检查点续跑；无可用检查点或生成方案失败时从 ENTRY_FIRST 重试。
     // 两次都不成功才把最终结果报给调用方(由调用方决定是否 alertFail)。
     async function runAccountWithRetry(entry, i) {
-        const r = await runDailyChain(tasker, entry, OVERRIDE, RUN_TIMEOUT_MS, { log })
-        if (r !== 'failed' && r !== 'timeout') return r
+        const checkpoint = createDailyResumeCheckpoint()
+        activeDailyResumeCheckpoint = checkpoint
+        try {
+            const r = await runDailyChain(tasker, entry, OVERRIDE, RUN_TIMEOUT_MS, { log })
+            if (r !== 'failed' && r !== 'timeout') return r
 
-        log(`⚠ 账号 ${i} 每日任务${r === 'timeout' ? '超时' : '失败'}，重试一次(先关游戏重启)...`)
-        await killGame()
-        if (!(await checkLogin())) {
-            log('重试前登录校验未通过(掉登录且等不到授权)，放弃本次重试')
-            return r
+            log(`⚠ 账号 ${i} 每日任务${r === 'timeout' ? '超时' : '失败'}，重试一次(先关游戏重启)...`)
+            await killGame()
+            if (!(await checkLogin())) {
+                log('重试前登录校验未通过(掉登录且等不到授权)，放弃本次重试')
+                return r
+            }
+
+            let retryPlan
+            try {
+                retryPlan = checkpoint.buildRetryPlan(OVERRIDE)
+            } catch (e) {
+                log('生成断点续跑方案失败，从头重试:', e.message ?? e)
+                retryPlan = {
+                    entry: ENTRY_FIRST,
+                    override: OVERRIDE,
+                    resumed: false,
+                    lastCompletedNode: null,
+                    nextEntry: null,
+                }
+            }
+
+            if (retryPlan.resumed) {
+                log(`从检查点续跑: ${retryPlan.lastCompletedNode} 已完成，下一个任务 ${retryPlan.nextEntry}`)
+            } else {
+                log('无可用检查点，从每日任务链开头重试')
+            }
+
+            const r2 = await runDailyChain(tasker, retryPlan.entry, retryPlan.override, RUN_TIMEOUT_MS, { log })
+            log(`账号 ${i} 重试结果: ${r2}`)
+            return r2
+        } finally {
+            activeDailyResumeCheckpoint = null
         }
-        const r2 = await runDailyChain(tasker, ENTRY_FIRST, OVERRIDE, RUN_TIMEOUT_MS, { log })
-        log(`账号 ${i} 重试结果: ${r2}`)
-        return r2
     }
 
     await killGame()
@@ -368,6 +401,7 @@ function nextRunTime() {
             await runOnce()
         } catch (e) {
             log('本轮执行出错:', e.message ?? e)
+            await alertFail(null, `本轮执行出错: ${e.message ?? e}`)
         }
         log('单次模式，结束。')
         return

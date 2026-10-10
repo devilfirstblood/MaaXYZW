@@ -88,12 +88,12 @@
         "action": "Click",
         "target": [
             360,
-            64,
+            4,
             1,
             1
         ],
         "post_delay": 1500,
-        "timeout": 60000,
+        "timeout": 10000,
         "next": [
             "全日常_确认主界面",
             "全日常_点空白关弹窗"

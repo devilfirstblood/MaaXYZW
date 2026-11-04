@@ -126,12 +126,6 @@
     "全日常_点任务菜单": {
         "recognition": "OCR",
         "expected": "任务",
-        "roi": [
-            30,
-            380,
-            170,
-            340
-        ],
         "action": "Click",
         "target": true,
         "post_delay": 1800,

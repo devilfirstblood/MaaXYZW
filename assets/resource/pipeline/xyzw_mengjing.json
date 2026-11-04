@@ -40,9 +40,13 @@
         ]
     },
     "梦境_商人驿站确认": {
-        "recognition": "OCR",
-        "expected": "商人驿站",
         "action": "Click",
+        "target": [
+          660,
+          1188,
+          1,
+          1
+        ],
         "post_delay": 1500,
         "next": [
             "梦境_确认初级商人"
@@ -287,7 +291,7 @@
         "action": "Click",
         "target": [
             360,
-            60,
+            10,
             1,
             1
         ],

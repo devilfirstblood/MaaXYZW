@@ -54,9 +54,14 @@
             "答题_领完"
         ]
     },
+    // 原来用 OCR "^领取$" 判断，红色"已领取"印章图案偶发被 OCR 读漏"已"字、误读成"领取"（实测置信度 0.99+），
+    // 导致全部任务已领完时仍会一直点这个死图案 -> 无实际效果 -> 跟 答题_关弹窗 无限对跳。
+    // 换成 TemplateMatch 识别真实绿色按钮图形，从根上避免这个 OCR 误读；
+    // threshold 0.9：真按钮命中分 0.99+，同形状的橙色"前往"按钮误命中分只有 0.81 左右，留足安全余量。
     "答题_领取": {
-        "recognition": "OCR",
-        "expected": "^领取$",
+        "recognition": "TemplateMatch",
+        "template": "dati_lingqu.png",
+        "threshold": 0.9,
         "action": "Click",
         "post_delay": 1500,
         "next": [

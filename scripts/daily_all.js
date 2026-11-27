@@ -67,7 +67,6 @@ const OVERRIDE = {
     '充值_完成': { next: ['咸王_入口']},
     '咸王_完成': { next: ['钓鱼_入口']},
     '钓鱼_完成': { next: ['俱乐部_启动']},
-    '俱乐部_完成': { next: ['珍宝阁_启动']},
 }
 
 function ts() {
@@ -230,7 +229,7 @@ async function runOnce() {
 
             if (i >= MAX_ACCOUNTS) break
 
-            const slots = await readSwitchSlots(ctrl, tasker)
+            const slots = await readSwitchSlots(ctrl, tasker, { log })
             const slot = pickNextSlot(slots, visited)
             if (!slot) {
                 log('无未做过的切换位，多账号轮转结束')
@@ -239,11 +238,13 @@ async function runOnce() {
             const ok = await switchToAccount(ctrl, tasker, slot, { log })
             if (!ok) {
                 log('✗ 切号失败，停止多账号轮转')
+                await alertFail(ctrl, `账号 ${i} 切号失败，停止多账号轮转`)
                 break
             }
             entry = ENTRY_NEXT
         }
-        // 收尾不关游戏，留前台(下轮开头 killGame 会清干净)
+        // 收尾关游戏：所有账号跑完后关掉，不留前台
+        await killGame()
     } finally {
         tasker.destroy()
         res.destroy()
@@ -323,6 +324,8 @@ async function runDatiIfMonday(ctrl, tasker, { log }) {
 
 // 「扭蛋工坊」免费领取：只在周二/四/六开放，直接跑一次，失败/异常只记日志不重试(与其他子流程一致)。
 async function runNiudanIfWeekday(ctrl, tasker, { log }) {
+    const r1 = await tasker.post_task('珍宝阁_启动').wait().get()
+    log('珍宝阁_启动:', r1?.status === 3000 ? '成功' : `未成功 status=${r1 && r1.status}`)
     if (![2, 4, 6].includes(new Date().getDay())) return
     log('今天是周二/四/六，跑「扭蛋」...')
     try {
@@ -381,6 +384,7 @@ function nextRunTime() {
             await runOnce()
         } catch (e) {
             log('本轮执行出错（不中断循环）:', e.message ?? e)
+            await alertFail(null, `本轮执行出错: ${e.message ?? e}`)
         }
     }
 })().catch((e) => {
